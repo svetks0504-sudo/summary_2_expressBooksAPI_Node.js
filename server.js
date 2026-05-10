@@ -10,7 +10,7 @@ const host = process.env.HOST || "127.0.0.1";
 
 app.use(express.json());
 
-const books = [
+let books = [
   /*{
   id: число (автоинкремент),
   title: строка,
@@ -57,7 +57,7 @@ app.get("/books/stats/genres", (req, res) => {
 app.get("/books/:id", (req, res) => {
   const id = Number(req.params.id);
 
-  const book = books.find((book) => book.id === id);
+  const book = findId(books, id);
 
   if (!book) {
     return res.status(404).json({ message: "Book not found" });
@@ -98,8 +98,8 @@ app.put("/books/:id", (req, res) => {
   const { title, author, year, genre, isAvailable } = req.body;
   const id = Number(req.params.id);
 
-  const book = find.books((book) => book.id === id);
-  if (!id) {
+  const book = findId(books, id);
+  if (!book) {
     return res.status(404).json({ message: "id not found" });
   }
   book.title = title;
@@ -111,7 +111,64 @@ app.put("/books/:id", (req, res) => {
   res.json(book);
 });
 
+app.patch("/books/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const book = findId(books, id);
 
+  if (!book) {
+    return res.status(404).json({ message: "id not found" });
+  }
+
+  const { title, author, year, genre, isAvailable } = req.body;
+
+  if (title !== undefined) book.title = title;
+  if (author !== undefined) book.author = author;
+  if (year !== undefined) book.year = year;
+  if (genre !== undefined) book.genre = genre;
+  if (isAvailable !== undefined) book.isAvailable = isAvailable;
+
+  res.json(book);
+});
+
+app.delete("/books/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const book = findId(books, id);
+  if (!book) {
+    return res.status(404).json({ message: "id not found" });
+  }
+  books = books.filter((book) => book.id !== id);
+  res.json({ message: "deleted" });
+});
+
+app.post("/books/:id/borrow", (req, res) => {
+  const id = Number(req.params.id);
+  const book = findId(books, id);
+  if (!book) {
+    return res.status(404).json({ message: "id not found" });
+  }
+  book.isAvailable = false;
+  res.json(book);
+});
+
+app.post("/books/:id/return", (req, res) => {
+  const id = Number(req.params.id);
+  const book = findId(books, id);
+  if (!book) {
+    return res.status(404).json({ message: "id not found" });
+  }
+  book.isAvailable = true;
+  res.json(book);
+});
+
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
+
+app.use((err, req, res, next) => {
+  console.log(err);
+  res.status(500).json({ message: "Server error" });
+});
 
 app.listen(port, host, () => {
   console.log(`Server running at http://${host}:${port}`);
@@ -119,4 +176,8 @@ app.listen(port, host, () => {
 
 function filterByField(arr, key, value) {
   return arr.filter((item) => item[key] === value);
+}
+function findId(books, id) {
+  const book = books.find((book) => book.id === id);
+  return book;
 }
